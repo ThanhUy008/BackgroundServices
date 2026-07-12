@@ -88,7 +88,11 @@ public abstract class BasePollingJob<TEntity, TMessage> : BackgroundService
             cancellationToken
         );
 
-        _logger.LogWarning("Fetched and transformed {Count} changed entities", temp.Count);
+        _logger.LogWarning(
+            "Fetched and transformed {Count} changed {Type}",
+            temp.Count,
+            typeof(TMessage).Name
+        );
         _logger.LogWarning("Generation of temp: {0}", GC.GetGeneration(temp));
         return (temp, newlyChangedEntities.Max(x => x.UpdatedOn));
     }
