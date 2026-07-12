@@ -1,5 +1,7 @@
 using ChangeTracker.Jobs;
 using ChangeTracker.Services;
+using ChangeTracker.Services.PollingServices;
+using ChangeTracker.Services.TransformerServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,10 +21,14 @@ builder.Services.AddDbContextFactory<CustomerDbContext>(options =>
 
 //Doesn't matter anyway, it will be scoped to the background service,
 //but we can use AddScoped for PollingCustomerServices
-builder.Services.AddSingleton<PollingCustomerServices>();
-builder.Services.AddSingleton<TransformService>();
+builder.Services.AddSingleton<CustomerPollingService>();
+builder.Services.AddSingleton<ItemPollingService>();
 
-builder.Services.AddHostedService<PollingBackgroundJob>();
+builder.Services.AddSingleton<CustomerTransformService>();
+builder.Services.AddSingleton<ItemTransformService>();
+
+builder.Services.AddHostedService<CustomerPollingBackgroundJob>();
+builder.Services.AddHostedService<ItemPollingBackgroundJob>();
 
 var app = builder.Build();
 
