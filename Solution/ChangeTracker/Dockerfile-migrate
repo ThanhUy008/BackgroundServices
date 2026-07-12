@@ -1,0 +1,21 @@
+ARG migrationImage=mcr.microsoft.com/dotnet/sdk:8.0
+FROM $migrationImage
+
+WORKDIR /app
+
+ARG dotnetToolVersion=8.0.0
+
+ENV PATH="${PATH}:/app/.dotnet/tools"
+
+RUN dotnet tool install dotnet-ef \
+    --tool-path /app/.dotnet/tools \
+    --version $dotnetToolVersion
+
+COPY Solution/ChangeTracker Solution/ChangeTracker
+COPY Solution/Shared Solution/Shared
+
+COPY Solution/ChangeTracker/migrate.sh Solution/ChangeTracker/migrate.sh
+
+RUN chmod +x Solution/ChangeTracker/migrate.sh
+
+ENTRYPOINT ["/bin/bash", "Solution/ChangeTracker/migrate.sh"]

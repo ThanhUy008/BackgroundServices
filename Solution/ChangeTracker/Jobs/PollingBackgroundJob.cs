@@ -1,21 +1,25 @@
 using ChangeTracker.Services;
 using Microsoft.Extensions.Logging;
+using Shared.Helpers;
+using Shared.Messages;
 
 namespace ChangeTracker.Jobs;
 
 public class PollingBackgroundJob : BackgroundService
 {
     private readonly ILogger<PollingBackgroundJob> _logger;
-
     private readonly PollingCustomerServices _pollingService;
+    private readonly TransformService _transformService;
 
     public PollingBackgroundJob(
         ILogger<PollingBackgroundJob> logger,
-        PollingCustomerServices pollingService
+        PollingCustomerServices pollingService,
+        TransformService transformService
     )
     {
         _logger = logger;
         _pollingService = pollingService;
+        _transformService = transformService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -28,12 +32,18 @@ public class PollingBackgroundJob : BackgroundService
 
             try
             {
-                var newlyChangedEntities = await _pollingService.FetchNewlyChangedEntities();
+                var messages = await FetchAndTransform();
 
-                foreach (var entity in newlyChangedEntities)
+                foreach (var message in messages)
                 {
-                    Console.WriteLine(entity.Name);
+                    // _logger.LogInformation(
+                    //     $"Processing customer: {message.Name} {message.Description} {message.Items.Length} items"
+                    // );
                 }
+                // _logger.LogWarning("Polling loop end");
+                _logger.LogWarning("Generation of message: {0} of", GC.GetGeneration(messages));
+
+                GCLogger.Log(_logger);
             }
             catch (Exception ex)
             {
@@ -44,5 +54,23 @@ public class PollingBackgroundJob : BackgroundService
         }
 
         _logger.LogInformation("PollingBackgroundJob stopped completely.");
+    }
+
+    private async Task<List<CustomerMessage>> FetchAndTransform()
+    {
+        var newlyChangedEntities = await _pollingService.FetchNewlyChangedEntities();
+
+        var temp = await _transformService.TransformChangedEntities(newlyChangedEntities);
+
+        _logger.LogWarning("Fetched and transformed {Count} changed entities", temp.Count);
+        // GCLogger.Log(_logger);
+        _logger.LogWarning("Generation of temp: {0}", GC.GetGeneration(temp));
+        return temp;
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Cleaning up resources before closing...");
+        await base.StopAsync(cancellationToken);
     }
 }

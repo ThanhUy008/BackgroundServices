@@ -69,7 +69,7 @@ public class PollingCustomerServices
     )
     {
         return _customerDbContext
-            .Customers.Where(x => x.UpdatedOn < currVer.LastVersionTimestamp)
+            .Customers.Where(x => x.UpdatedOn > currVer.LastVersionTimestamp)
             .ToListAsync();
     }
 }

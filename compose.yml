@@ -1,0 +1,90 @@
+version: "3.9"
+
+services:
+  client-postgres:
+    image: postgres:17.5
+    container_name: client-postgres-db
+    restart: on-failure
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: clientdb
+      TZ: UTC
+
+    ports:
+      - "5434:5432"
+
+    volumes:
+      - client-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clientdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-postgres:
+    image: postgres:17.5
+    container_name: app-postgres-db
+    restart: on-failure
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+      TZ: UTC
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - app-postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  change-tracker-migration:
+    build:
+      context: .
+      dockerfile: Solution/ChangeTracker/Dockerfile-migrate
+      args:
+        dotnetToolVersion: 8.0.0
+    container_name: change-tracker-migration
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__CustomerDb: "Host=client-postgres;Port=5432;Database=clientdb;Username=postgres;Password=postgres;"
+      ConnectionStrings__AppDb: "Host=app-postgres;Port=5432;Database=appdb;Username=postgres;Password=postgres;"
+    depends_on:
+      client-postgres:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+    restart: "no"
+
+  change-tracker:
+    build:
+      context: .
+      dockerfile: Solution/ChangeTracker/Dockerfile
+    container_name: change-tracker
+    restart: on-failure
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Logging__LogLevel__Default: Warning
+      ConnectionStrings__CustomerDb: "Host=client-postgres;Port=5432;Database=clientdb;Username=postgres;Password=postgres;"
+      ConnectionStrings__AppDb: "Host=app-postgres;Port=5432;Database=appdb;Username=postgres;Password=postgres;"
+    mem_limit: 700m
+    depends_on:
+      client-postgres:
+        condition: service_healthy
+      app-postgres:
+        condition: service_healthy
+      change-tracker-migration:
+        condition: service_completed_successfully
+volumes:
+  client-postgres-data:
+  app-postgres-data:

@@ -1,4 +1,3 @@
-
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -6,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace Shared.DbContexts;
 
-public class AppDbContextFactory: IDesignTimeDbContextFactory<AppDbContext>
+public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)
     {
@@ -18,17 +17,18 @@ public class AppDbContextFactory: IDesignTimeDbContextFactory<AppDbContext>
             .Build();
 
         var connStr = configuration.GetConnectionString("AppDb");
-        
+
         if (string.IsNullOrWhiteSpace(connStr))
         {
-            throw new InvalidOperationException("ConnectionStrings__AppDb environment variable is missing.");
+            throw new InvalidOperationException(
+                "ConnectionStrings__AppDb environment variable is missing."
+            );
         }
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-
         optionsBuilder.UseNpgsql(connStr);
 
         return new AppDbContext(optionsBuilder.Options);
-    } 
+    }
 }

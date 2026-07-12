@@ -20,6 +20,7 @@ builder.Services.AddDbContextFactory<CustomerDbContext>(options =>
 //Doesn't matter anyway, it will be scoped to the background service,
 //but we can use AddScoped for PollingCustomerServices
 builder.Services.AddSingleton<PollingCustomerServices>();
+builder.Services.AddSingleton<TransformService>();
 
 builder.Services.AddHostedService<PollingBackgroundJob>();
 
