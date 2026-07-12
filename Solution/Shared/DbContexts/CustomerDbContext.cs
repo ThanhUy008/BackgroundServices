@@ -10,6 +10,7 @@ public class CustomerDbContext : DbContext
 
     public override int SaveChanges()
     {
+        ApplyTrackingData();
         return base.SaveChanges();
     }
 

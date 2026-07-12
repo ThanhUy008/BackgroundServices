@@ -77,7 +77,7 @@ services:
       Logging__LogLevel__Default: Warning
       ConnectionStrings__CustomerDb: "Host=client-postgres;Port=5432;Database=clientdb;Username=postgres;Password=postgres;"
       ConnectionStrings__AppDb: "Host=app-postgres;Port=5432;Database=appdb;Username=postgres;Password=postgres;"
-    mem_limit: 700m
+    mem_limit: 500m
     depends_on:
       client-postgres:
         condition: service_healthy
