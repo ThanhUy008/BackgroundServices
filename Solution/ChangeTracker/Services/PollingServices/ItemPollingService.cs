@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using ChangeTracker.Services.BaseServices;
 using Microsoft.EntityFrameworkCore;
 using Shared;
@@ -17,25 +18,34 @@ public class ItemPollingService : BasePollingService<Item>
 
     public ItemPollingService(
         IDbContextFactory<AppDbContext> appDbContextFactory,
-        IDbContextFactory<CustomerDbContext> customerDbContextFactory
+        IDbContextFactory<CustomerDbContext> customerDbContextFactory,
+        ILogger<BasePollingService<Item>> logger
     )
-        : base(appDbContextFactory, customerDbContextFactory)
+        : base(appDbContextFactory, customerDbContextFactory, logger)
     {
         _appDbContextFactory = appDbContextFactory;
         _customerDbContextFactory = customerDbContextFactory;
     }
 
-    public override async Task<List<Item>> GetChangedEntityFromLast(
+    public override async IAsyncEnumerable<Item> GetChangedEntityFromLast(
         VersionTracker currVer,
-        CancellationToken cancellationToken = default
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
         using var _customerDbContext = await _customerDbContextFactory.CreateDbContextAsync(
             cancellationToken
         );
 
-        return await _customerDbContext
-            .Items.Where(c => c.UpdatedOn > DateTime.MinValue)
-            .ToListAsync(cancellationToken);
+        await foreach (
+            var item in _customerDbContext
+                .Items.Where(c => c.UpdatedOn > DateTime.MinValue)
+                .AsNoTracking()
+                .AsAsyncEnumerable()
+                .WithCancellation(cancellationToken)
+        )
+        {
+            // _logger.LogWarning($"Item ref: {RuntimeHelpers.GetHashCode(item)}");
+            yield return item;
+        }
     }
 }

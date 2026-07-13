@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using Shared;
 using Shared.DbContexts;
@@ -10,32 +11,49 @@ public abstract class BasePollingService<TEntity>
 {
     private readonly IDbContextFactory<AppDbContext> _appDbContextFactory;
     private readonly IDbContextFactory<CustomerDbContext> _customerDbContextFactory;
+    protected readonly ILogger<BasePollingService<TEntity>> _logger;
 
     public BasePollingService(
         IDbContextFactory<AppDbContext> appDbContextFactory,
-        IDbContextFactory<CustomerDbContext> customerDbContextFactory
+        IDbContextFactory<CustomerDbContext> customerDbContextFactory,
+        ILogger<BasePollingService<TEntity>> logger
     )
     {
         _appDbContextFactory = appDbContextFactory;
         _customerDbContextFactory = customerDbContextFactory;
+        _logger = logger;
     }
 
-    public virtual async Task<List<TEntity>> FetchNewlyChangedEntities(
-        CancellationToken cancellationToken = default
+    public virtual async IAsyncEnumerable<List<TEntity>> FetchNewlyChangedEntitiesAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
         using var _customerDbContext = await _customerDbContextFactory.CreateDbContextAsync(
             cancellationToken
         );
 
-        var currTable = _customerDbContext.GetTableName<TEntity>();
+        var tableName = _customerDbContext.GetTableName<TEntity>();
 
-        var currVer = await GetOrCreateVersionTracker(currTable, cancellationToken);
+        var currVer = await GetOrCreateVersionTrackerAsync(tableName, cancellationToken);
 
-        return await GetChangedEntityFromLast(currVer, cancellationToken);
+        var batch = new List<TEntity>(500);
+
+        await foreach (var entity in GetChangedEntityFromLast(currVer, cancellationToken))
+        {
+            batch.Add(entity);
+
+            // _logger.LogWarning($"Fetched entity ref: {RuntimeHelpers.GetHashCode(entity)}");
+
+            if (batch.Count == 500)
+            {
+                yield return batch;
+
+                batch = new List<TEntity>(500);
+            }
+        }
     }
 
-    public virtual async Task<VersionTracker> GetOrCreateVersionTracker(
+    public virtual async Task<VersionTracker> GetOrCreateVersionTrackerAsync(
         string tableName,
         CancellationToken cancellationToken = default
     )
@@ -68,7 +86,7 @@ public abstract class BasePollingService<TEntity>
         return currVer;
     }
 
-    public virtual async Task UpdateVersionTracker(
+    public virtual async Task UpdateVersionTrackerAsync(
         DateTime lastVersionTimestamp,
         CancellationToken cancellationToken = default
     )
@@ -96,7 +114,7 @@ public abstract class BasePollingService<TEntity>
         await _appDbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public abstract Task<List<TEntity>> GetChangedEntityFromLast(
+    public abstract IAsyncEnumerable<TEntity> GetChangedEntityFromLast(
         VersionTracker currVer,
         CancellationToken cancellationToken = default
     );

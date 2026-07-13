@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using ChangeTracker.Services.BaseServices;
 using Microsoft.EntityFrameworkCore;
 using Shared;
@@ -17,25 +18,34 @@ public class CustomerPollingService : BasePollingService<Customer>
 
     public CustomerPollingService(
         IDbContextFactory<AppDbContext> appDbContextFactory,
-        IDbContextFactory<CustomerDbContext> customerDbContextFactory
+        IDbContextFactory<CustomerDbContext> customerDbContextFactory,
+        ILogger<BasePollingService<Customer>> logger
     )
-        : base(appDbContextFactory, customerDbContextFactory)
+        : base(appDbContextFactory, customerDbContextFactory, logger)
     {
         _appDbContextFactory = appDbContextFactory;
         _customerDbContextFactory = customerDbContextFactory;
     }
 
-    public override async Task<List<Customer>> GetChangedEntityFromLast(
+    public override async IAsyncEnumerable<Customer> GetChangedEntityFromLast(
         VersionTracker currVer,
-        CancellationToken cancellationToken = default
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
         using var _customerDbContext = await _customerDbContextFactory.CreateDbContextAsync(
             cancellationToken
         );
 
-        return await _customerDbContext
-            .Customers.Where(c => c.UpdatedOn > DateTime.MinValue)
-            .ToListAsync(cancellationToken);
+        await foreach (
+            var customer in _customerDbContext
+                .Customers.Where(c => c.UpdatedOn > DateTime.MinValue)
+                .AsNoTracking()
+                .AsAsyncEnumerable()
+                .WithCancellation(cancellationToken)
+        )
+        {
+            // _logger.LogWarning($"Customer ref: {RuntimeHelpers.GetHashCode(customer)}");
+            yield return customer;
+        }
     }
 }
