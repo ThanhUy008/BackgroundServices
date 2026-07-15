@@ -65,66 +65,90 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # kafka:
-  #   image: apache/kafka:latest
-  #   container_name: kafka-broker
-  #   ports:
-  #     - "9092:9092"
-  #   environment:
-  #     # Configure Kafka to run in KRaft mode (combined broker and controller role)
-  #     KAFKA_BROKER_ID: 1
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-  #     KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-  #     KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-  #     KAFKA_PROCESS_ROLES: broker,controller
-  #     KAFKA_NODE_ID: 1
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:29093
-  #     KAFKA_LISTENERS: PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  #     KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
-  #     CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka-broker
+    ports:
+      - "9092:9092"
 
-  #   healthcheck:
-  #     test:
-  #       [
-  #         "CMD-SHELL",
-  #         "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1",
-  #       ]
-  #     interval: 20s
-  #     timeout: 8s
-  #     retries: 3
-  #     start_period: 20s
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
 
-  #   volumes:
-  #     - kafka-data:/var/lib/kafka/data
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
 
-  # kafka-topic-init:
-  #   image: apache/kafka:latest
-  #   container_name: kafka-topic-init
-  #   depends_on:
-  #     kafka:
-  #       condition: service_healthy
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,EXTERNAL://0.0.0.0:9092
 
-  #   entrypoint: ["/bin/sh", "-c"]
-  #   command: >
-  #     /opt/kafka/bin/kafka-topics.sh
-  #     --bootstrap-server kafka:29092
-  #     --create
-  #     --if-not-exists
-  #     --topic customer-changes
-  #     --partitions 3
-  #     --replication-factor 1
-  #     &&
-  #     /opt/kafka/bin/kafka-topics.sh
-  #     --bootstrap-server kafka:29092
-  #     --describe
-  #     --topic customer-changes
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
 
-  #   restart: "no"
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list >/dev/null 2>&1",
+        ]
+      interval: 20s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  kafka-topic-init:
+    image: apache/kafka:latest
+    container_name: kafka-topic-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        echo "Creating Kafka topic..."
+
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --create \
+          --if-not-exists \
+          --topic customer-changes \
+          --partitions 3 \
+          --replication-factor 1
+
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --create \
+          --if-not-exists \
+          --topic item-changes \
+          --partitions 3 \
+          --replication-factor 1
+
+        echo "Describing Kafka topic..."
+
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --describe \
+          --topic customer-changes
+
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --describe \
+          --topic item-changes
+
+    restart: "no"
 
   change-tracker:
     build:
@@ -149,4 +173,4 @@ services:
 volumes:
   client-postgres-data:
   app-postgres-data:
-  # kafka-data:
+  kafka-data:
