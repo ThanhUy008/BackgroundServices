@@ -1,5 +1,6 @@
 namespace Shared.Messages;
 
+[Channel("customer-changes")]
 public class CustomerMessage
 {
     public Guid Id { get; set; }

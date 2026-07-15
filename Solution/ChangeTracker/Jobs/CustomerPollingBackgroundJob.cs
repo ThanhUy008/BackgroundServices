@@ -1,3 +1,4 @@
+using ChangeTracker.BaseServices;
 using ChangeTracker.Jobs.BaseJobs;
 using ChangeTracker.Services;
 using ChangeTracker.Services.PollingServices;
@@ -18,9 +19,10 @@ public class CustomerPollingBackgroundJob : BasePollingJob<Customer, CustomerMes
     public CustomerPollingBackgroundJob(
         ILogger<CustomerPollingBackgroundJob> logger,
         CustomerPollingService pollingService,
-        CustomerTransformService transformService
+        CustomerTransformService transformService,
+        MessagePubliserService messagePublisherService
     )
-        : base(logger, pollingService, transformService)
+        : base(logger, pollingService, transformService, messagePublisherService)
     {
         _logger = logger;
         _pollingService = pollingService;

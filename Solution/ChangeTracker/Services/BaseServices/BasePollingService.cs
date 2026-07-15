@@ -36,7 +36,7 @@ public abstract class BasePollingService<TEntity>
 
         var currVer = await GetOrCreateVersionTrackerAsync(tableName, cancellationToken);
 
-        var batch = new List<TEntity>(500);
+        var batch = new List<TEntity>(100);
 
         await foreach (var entity in GetChangedEntityFromLast(currVer, cancellationToken))
         {
@@ -44,11 +44,11 @@ public abstract class BasePollingService<TEntity>
 
             // _logger.LogWarning($"Fetched entity ref: {RuntimeHelpers.GetHashCode(entity)}");
 
-            if (batch.Count == 500)
+            if (batch.Count == 100)
             {
                 yield return batch;
 
-                batch = new List<TEntity>(500);
+                batch = new List<TEntity>(100);
             }
         }
     }

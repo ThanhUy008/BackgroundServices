@@ -158,10 +158,13 @@ services:
     restart: on-failure
 
     environment:
+      Kafka__BootstrapServers: kafka:29092
       ASPNETCORE_ENVIRONMENT: Development
       Logging__LogLevel__Default: Warning
       ConnectionStrings__CustomerDb: "Host=client-postgres;Port=5432;Database=clientdb;Username=postgres;Password=postgres;"
       ConnectionStrings__AppDb: "Host=app-postgres;Port=5432;Database=appdb;Username=postgres;Password=postgres;"
+    volumes:
+      - ./Solution/ChangeTracker/appsettings.json:/app/appsettings.json:ro
     mem_limit: 100m
     depends_on:
       client-postgres:

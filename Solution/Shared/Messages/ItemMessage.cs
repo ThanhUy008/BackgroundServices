@@ -1,5 +1,6 @@
 namespace Shared.Messages;
 
+[Channel("item-changes")]
 public class ItemMessage
 {
     public Guid Id { get; set; }

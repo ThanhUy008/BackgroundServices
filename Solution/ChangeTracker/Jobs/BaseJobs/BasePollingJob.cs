@@ -17,18 +17,20 @@ public abstract class BasePollingJob<TEntity, TMessage> : BackgroundService
     private readonly ILogger<BasePollingJob<TEntity, TMessage>> _logger;
     private readonly BasePollingService<TEntity> _pollingService;
     private readonly BaseTransformService<TEntity, TMessage> _transformService;
-
+    private readonly MessagePubliserService _messagePublisherService;
     private static SemaphoreSlim semaphore = new SemaphoreSlim(2, 2);
 
     public BasePollingJob(
         ILogger<BasePollingJob<TEntity, TMessage>> logger,
         BasePollingService<TEntity> pollingService,
-        BaseTransformService<TEntity, TMessage> transformService
+        BaseTransformService<TEntity, TMessage> transformService,
+        MessagePubliserService messagePublisherService
     )
     {
         _logger = logger;
         _pollingService = pollingService;
         _transformService = transformService;
+        _messagePublisherService = messagePublisherService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -60,10 +62,10 @@ public abstract class BasePollingJob<TEntity, TMessage> : BackgroundService
 
                     foreach (var message in messages)
                     {
-                        // _logger.LogInformation(
-                        //     $"Processing customer: {message.Name} {message.Description} {message.Items.Length} items"
-                        // );
+                        //currently fire and forget, need batching
+                        _messagePublisherService.PublishMessageAsync<TMessage>(message);
                     }
+
                     // _logger.LogWarning("Polling loop end");
                     _logger.LogWarning("Generation of message: {0} of", GC.GetGeneration(messages));
 
@@ -82,7 +84,7 @@ public abstract class BasePollingJob<TEntity, TMessage> : BackgroundService
             }
             GCLogger.Log(_logger);
 
-            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
         }
 
         _logger.LogInformation("PollingBackgroundJob stopped completely.");
