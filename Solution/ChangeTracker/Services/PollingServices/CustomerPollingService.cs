@@ -38,7 +38,7 @@ public class CustomerPollingService : BasePollingService<Customer>
 
         await foreach (
             var customer in _customerDbContext
-                .Customers.Where(c => c.UpdatedOn > DateTime.MinValue)
+                .Customers.Where(c => c.UpdatedOn > currVer.LastVersionTimestamp)
                 .AsNoTracking()
                 .AsAsyncEnumerable()
                 .WithCancellation(cancellationToken)

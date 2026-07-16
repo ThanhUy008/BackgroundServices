@@ -37,10 +37,6 @@ public class MessagePubliserService
                 },
                 cancellationToken
             );
-
-            _logger.LogInformation(
-                $"Published message to topic '{typeof(T).GetCustomAttribute<ChannelAttribute>()?.TopicName}': {message}"
-            );
         }
         catch (Exception ex)
         {

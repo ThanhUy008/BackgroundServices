@@ -38,7 +38,7 @@ public class ItemPollingService : BasePollingService<Item>
 
         await foreach (
             var item in _customerDbContext
-                .Items.Where(c => c.UpdatedOn > DateTime.MinValue)
+                .Items.Where(c => c.UpdatedOn > currVer.LastVersionTimestamp)
                 .AsNoTracking()
                 .AsAsyncEnumerable()
                 .WithCancellation(cancellationToken)
