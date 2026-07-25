@@ -77,6 +77,12 @@ public abstract class BasePollingJob<TEntity, TMessage> : BackgroundService
                     semaphore.Release();
                 }
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Polling loop canceled");
+                semaphore.Release();
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while looping PollingBackGroundJob");
