@@ -8,7 +8,7 @@ I go with the flow, and right now I think it is a good time to learn the basic.
 
 ## About the project
 
-**1. ### Change tracking**
+1. ### Change tracking
 
 Pooling from database and keep a timestamp on current database to keep track. Which is a background service. A **singleton** service that run until the application die, or we exit it via cancellation token.
 
