@@ -1,6 +1,6 @@
 namespace Shared.ConfigurateObjects;
 
-public class KafkaSettings
+public class KafkaProducerSettings
 {
     public string BootstrapServers { get; set; }
     public int MessageMaxBytes { get; set; }

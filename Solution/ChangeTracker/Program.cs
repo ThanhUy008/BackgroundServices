@@ -36,11 +36,11 @@ builder.Services.AddSingleton<MessagePubliserService>();
 builder.Services.AddHostedService<CustomerPollingBackgroundJob>();
 builder.Services.AddHostedService<ItemPollingBackgroundJob>();
 
-builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
+builder.Services.Configure<KafkaProducerSettings>(builder.Configuration.GetSection("Kafka"));
 
 builder.Services.AddSingleton(sp =>
 {
-    var kafkaSettings = sp.GetRequiredService<IOptions<KafkaSettings>>().Value;
+    var kafkaSettings = sp.GetRequiredService<IOptions<KafkaProducerSettings>>().Value;
 
     var producerConfig = new ProducerConfig
     {
